@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, Optional
 
 from app.config import settings
@@ -54,7 +54,7 @@ class Watchdog:
             time.sleep(self._check_interval)
 
     def _check(self) -> None:
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         heartbeats = self._db.get_heartbeats()
         timeout_ts = time.time() - self._heartbeat_timeout
 
