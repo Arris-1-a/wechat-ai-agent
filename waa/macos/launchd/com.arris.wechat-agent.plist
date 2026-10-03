@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.arris.wechat-agent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa/.venv/bin/python3</string>
+        <string>-m</string>
+        <string>app.main</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa/data/logs/waa.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa/data/logs/waa.err.log</string>
+    <key>WorkingDirectory</key>
+    <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa</string>
+</dict>
+</plist>
