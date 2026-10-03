@@ -11,6 +11,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+from app.agent import AIChatAgent
 from app.config import settings
 from app.database import Database
 from app.deduplicator import Deduplicator
@@ -19,6 +20,7 @@ from app.logging_config import logger
 from app.throttle import ReplyThrottle
 from app.watchdog import Watchdog
 from app.wechat import create_adapter
+from app.worker import MessageWorker
 
 
 def main() -> None:
@@ -46,13 +48,16 @@ def main() -> None:
         min_delay=settings.reply_min_delay,
         max_delay=settings.reply_max_delay,
     )
+    agent = AIChatAgent()
     watchdog = Watchdog(db)
     listener = MessageListener(adapter, db, deduplicator)
+    worker = MessageWorker(adapter, db, throttle)
 
     # Setup signal handlers
     def _shutdown(signum, frame):
         logger.info("Received signal %d, shutting down...", signum)
         listener.stop()
+        worker.stop()
         watchdog.stop()
         db.close()
         sys.exit(0)
@@ -68,6 +73,7 @@ def main() -> None:
     # Start services
     watchdog.start()
     listener.start()
+    worker.start()
 
     logger.info("WAA running. Dashboard: http://%s:%d", settings.dashboard_host, settings.dashboard_port)
 
