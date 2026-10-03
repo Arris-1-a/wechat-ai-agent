@@ -6,6 +6,7 @@ import threading
 import time
 from typing import Optional
 
+from app.agent import AIChatAgent
 from app.config import settings
 from app.database import Database
 from app.logging_config import logger
@@ -35,6 +36,7 @@ class MessageWorker:
         self._thread: Optional[threading.Thread] = None
         self._safety = SafetyPolicy(high_risk_mode=settings.high_risk_mode)
         self._validator = ReplyValidator(max_length=settings.max_reply_length)
+        self._agent = AIChatAgent()
 
     def start(self) -> None:
         self._running = True
@@ -157,8 +159,7 @@ class MessageWorker:
         return "\n".join(context_lines[-(settings.max_context_messages * 2):])
 
     def _generate_reply(self, context: str, risk_level: str) -> Optional[str]:
-        """Generate AI reply using LLM. Placeholder for Phase F."""
-        # TODO: Integrate with LLM API
-        # For now, return a simple placeholder
-        logger.debug("Generating reply for context (risk=%s)", risk_level)
-        return None  # Will be implemented in Phase F
+        """Generate AI reply using LLM."""
+        # Extract the latest message content
+        message = context.split("\n")[-1].replace("对方: ", "")
+        return self._agent.generate_reply(context, message)
