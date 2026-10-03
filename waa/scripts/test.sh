@@ -13,4 +13,4 @@ if [ ! -f ".venv/bin/python3" ]; then
 fi
 
 echo "Running WAA tests..."
-.venv/bin/python3 tests/test_core.py
+.venv/bin/python -m pytest waa/tests/ -v --tb=short
