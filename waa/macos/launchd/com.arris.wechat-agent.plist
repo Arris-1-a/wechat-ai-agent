@@ -6,7 +6,7 @@
     <string>com.arris.wechat-agent</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa/.venv/bin/python3</string>
+        <string>/Users/lichen/Agnes-2/wechat-ai-agent/waa/.venv/bin/python3</string>
         <string>-m</string>
         <string>app.main</string>
     </array>
@@ -20,10 +20,10 @@
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa/data/logs/waa.log</string>
+    <string>/Users/lichen/Agnes-2/wechat-ai-agent/waa/data/logs/waa.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa/data/logs/waa.err.log</string>
+    <string>/Users/lichen/Agnes-2/wechat-ai-agent/waa/data/logs/waa.err.log</string>
     <key>WorkingDirectory</key>
-    <string>/Users/lichen/Agnes-2/Ai-coding-program-001/waa</string>
+    <string>/Users/lichen/Agnes-2/wechat-ai-agent/waa</string>
 </dict>
 </plist>
