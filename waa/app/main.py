@@ -15,6 +15,7 @@ from app.agent import AIChatAgent
 from app.config import settings
 from app.database import Database
 from app.deduplicator import Deduplicator
+from app.dashboard import Dashboard
 from app.listener import MessageListener
 from app.logging_config import logger
 from app.throttle import ReplyThrottle
@@ -52,6 +53,7 @@ def main() -> None:
     watchdog = Watchdog(db)
     listener = MessageListener(adapter, db, deduplicator)
     worker = MessageWorker(adapter, db, throttle)
+    dashboard = Dashboard(db)
 
     # Setup signal handlers
     def _shutdown(signum, frame):
@@ -74,6 +76,7 @@ def main() -> None:
     watchdog.start()
     listener.start()
     worker.start()
+    dashboard.start_server()
 
     logger.info("WAA running. Dashboard: http://%s:%d", settings.dashboard_host, settings.dashboard_port)
 
