@@ -1,15 +1,13 @@
-#!/usr/bin/env bash
-# Run WAA health check
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-
-cd "$PROJECT_DIR"
-
-if [ ! -f ".venv/bin/python3" ]; then
-    echo "Error: .venv not found. Run ./scripts/install.sh first."
-    exit 1
+#!/bin/bash
+echo "=== WAA Status ==="
+if pgrep -f "waa.*main" > /dev/null 2>&1; then
+    PID=$(pgrep -f "waa.*main" | head -1)
+    echo "WAA: RUNNING (pid $PID)"
+    echo "Dashboard: http://127.0.0.1:8765"
+else
+    echo "WAA: NOT RUNNING"
 fi
-
-.venv/bin/python3 -m app.main --health
+echo ""
+curl -s http://127.0.0.1:8765/health 2>/dev/null | python -m json.tool 2>/dev/null || echo "  Dashboard unreachable"
+echo ""
+tail -n 20 "$HOME/.wechat-ai-agent/logs/waa_$(date +%Y-%m-%d).log" 2>/dev/null || echo "  No log file for today"
