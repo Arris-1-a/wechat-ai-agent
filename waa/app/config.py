@@ -120,6 +120,7 @@ class Settings(BaseSettings):
 
     safe_mode: bool = True
     auto_reply_enabled: bool = True
+    allow_safe_mode_processing: bool = False  # Allow worker to process in safe_mode when True
 
     dashboard_host: str = "127.0.0.1"
     dashboard_port: int = 8765

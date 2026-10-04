@@ -171,6 +171,10 @@ class Dashboard:
         async def emergency_stop():
             from app.state import state
             state.emergency_stop()
+            # Also signal worker to stop processing
+            worker = _components.get("worker")
+            if worker and hasattr(worker, "stop"):
+                worker.stop()
             self._db.log_event("emergency_stop", "WARNING", "Emergency stop activated")
             return {"status": "ok", "message": "Auto-reply disabled"}
 
