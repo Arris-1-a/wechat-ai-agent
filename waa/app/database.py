@@ -122,7 +122,8 @@ class Database:
                 " ON CONFLICT(wx_id) DO UPDATE SET display_name=excluded.display_name, updated_at=excluded.updated_at",
                 (wx_id, display_name, now, now),
             )
-            return conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            row = conn.execute("SELECT id FROM contacts WHERE wx_id = ?", (wx_id,)).fetchone()
+            return row[0]
 
     def get_contact(self, wx_id: str) -> Optional[dict]:
         conn = self._get_conn()
