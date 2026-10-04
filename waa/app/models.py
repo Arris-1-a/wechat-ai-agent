@@ -15,12 +15,18 @@ class Direction(str, Enum):
 class MessageStatus(str, Enum):
     RECEIVED = "received"
     PROCESSING = "processing"
+    QUEUED = "queued"
+    AI_GENERATED = "ai_generated"
+    SAFETY_CHECKED = "safety_checked"
+    READY_TO_SEND = "ready_to_send"
     PROCESSED = "processed"
     FAILED = "failed"
     IGNORED = "ignored"
     SENDING = "sending"
     SENT = "sent"
     SEND_UNKNOWN = "send_unknown"
+    BLOCKED = "blocked"
+    HUMAN_REQUIRED = "human_required"
 
 
 class RiskLevel(str, Enum):
@@ -41,6 +47,19 @@ class EventSeverity(str, Enum):
     WARNING = "WARNING"
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
+
+
+class SystemState(str, Enum):
+    BOOTING = "booting"
+    CHECKING = "checking"
+    WAITING_WECHAT = "waiting_wechat"
+    WECHAT_READY = "wechat_ready"
+    AI_READY = "ai_ready"
+    RUNNING = "running"
+    DEGRADED = "degraded"
+    RECOVERING = "recovering"
+    STOPPED = "stopped"
+    ERROR = "error"
 
 
 @dataclass
@@ -65,6 +84,7 @@ class AiResponse:
     reply: Optional[str] = None
     risk: RiskLevel = RiskLevel.LOW
     reason: str = ""
+    confidence: float = 0.0
 
 
 @dataclass

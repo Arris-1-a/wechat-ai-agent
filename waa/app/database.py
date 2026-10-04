@@ -241,6 +241,21 @@ class Database:
             )
             return conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
+    def get_ai_replies(self, limit: int = 100) -> list[dict]:
+        """Get recent AI replies with contact info."""
+        with self._get_conn() as conn:
+            rows = conn.execute("""
+                SELECT ar.id, ar.message_id, ar.response as ai_reply, ar.model, ar.latency_ms,
+                       ar.status, ar.created_at,
+                       m.contact_id, m.content, c.display_name
+                FROM ai_replies ar
+                JOIN messages m ON ar.message_id = m.id
+                JOIN contacts c ON m.contact_id = c.id
+                ORDER BY ar.created_at DESC
+                LIMIT ?
+            """, (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
     # ── Conversations ─────────────────────────────────────────
 
     def upsert_conversation(

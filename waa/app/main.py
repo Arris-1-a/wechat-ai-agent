@@ -1,27 +1,56 @@
-"""Main entry point for WAA."""
+"""Main entry point for WAA with PID management and graceful shutdown."""
 from __future__ import annotations
 
 import argparse
+import os
 import signal
 import sys
 import time
 from pathlib import Path
 
-# Ensure we can import from the project root
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from app.agent import AIChatAgent
 from app.config import settings
 from app.database import Database
 from app.deduplicator import Deduplicator
 from app.dashboard import Dashboard
 from app.listener import MessageListener
 from app.logging_config import logger
+from app.state import state
 from app.throttle import ReplyThrottle
 from app.watchdog import Watchdog
 from app.wechat import create_adapter
 from app.worker import MessageWorker
+
+_components = {}
+
+
+def _write_pid() -> None:
+    settings.pid_path.parent.mkdir(parents=True, exist_ok=True)
+    settings.pid_path.write_text(str(os.getpid()))
+
+
+def _remove_pid() -> None:
+    try:
+        settings.pid_path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def _shutdown(signum: int, frame) -> None:
+    logger.info("Received signal %d, shutting down gracefully...", signum)
+    for name in ("listener", "worker", "watchdog"):
+        comp = _components.get(name)
+        if comp and hasattr(comp, "stop"):
+            comp.stop()
+    _components.get("agent") and _components["agent"].close()
+    db = _components.get("db")
+    if db:
+        db.close()
+    _remove_pid()
+    logger.info("WAA stopped.")
+    sys.exit(0)
 
 
 def main() -> None:
@@ -34,80 +63,87 @@ def main() -> None:
     logger.info("WAA starting (env=%s)", settings.app_env)
     logger.info("=" * 60)
 
-    # Initialize database
+    _write_pid()
+    state.pid = os.getpid()
+    state.start_time = time.time()
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+
     db = Database(settings.db_path)
     db.init()
+    _components["db"] = db
 
     if args.health:
         _run_health_check(db)
+        db.close()
         return
 
-    # Create components
     adapter = create_adapter()
     deduplicator = Deduplicator()
-    throttle = ReplyThrottle(
-        min_delay=settings.reply_min_delay,
-        max_delay=settings.reply_max_delay,
-    )
-    agent = AIChatAgent()
+    throttle = ReplyThrottle(min_delay=settings.reply_min_delay, max_delay=settings.reply_max_delay)
     watchdog = Watchdog(db)
     listener = MessageListener(adapter, db, deduplicator)
     worker = MessageWorker(adapter, db, throttle)
     dashboard = Dashboard(db)
 
-    # Setup signal handlers
-    def _shutdown(signum, frame):
-        logger.info("Received signal %d, shutting down...", signum)
-        listener.stop()
-        worker.stop()
-        watchdog.stop()
-        db.close()
-        sys.exit(0)
+    _components.update({
+        "adapter": adapter,
+        "deduplicator": deduplicator,
+        "throttle": throttle,
+        "watchdog": watchdog,
+        "listener": listener,
+        "worker": worker,
+        "dashboard": dashboard,
+    })
 
-    signal.signal(signal.SIGINT, _shutdown)
-    signal.signal(signal.SIGTERM, _shutdown)
-
-    # Record initial heartbeat
     watchdog.record_heartbeat("agent", "healthy")
     watchdog.record_heartbeat("database", "healthy")
     watchdog.record_heartbeat("wechat", "unknown")
 
-    # Start services
     watchdog.start()
     listener.start()
     worker.start()
     dashboard.start_server()
 
-    logger.info("WAA running. Dashboard: http://%s:%d", settings.dashboard_host, settings.dashboard_port)
+    state.agent_running = True
+    logger.info("WAA running. Dashboard: %s", settings.dashboard_url)
 
     try:
         while True:
             time.sleep(1)
             watchdog.record_heartbeat("agent", "healthy")
     except KeyboardInterrupt:
-        _shutdown(None, None)
+        _shutdown(2, None)
 
 
 def _run_health_check(db: Database) -> None:
     """Run health check and exit."""
+    from app.wechat import create_adapter
     adapter = create_adapter()
+    checks = {
+        "database": True,
+        "wechat_running": adapter.is_running(),
+        "wechat_accessible": False,
+    }
     try:
-        checks = {
-            "database": db is not None,
-            "wechat_running": adapter.is_running(),
-            "wechat_accessible": adapter.health_check(),
-        }
-    except NotImplementedError as e:
-        print(f"\n  WARNING: {e}")
-        checks = {
-            "database": db is not None,
-            "wechat_running": adapter.is_running(),
-            "wechat_accessible": False,
-        }
+        checks["wechat_accessible"] = adapter.health_check()
+    except Exception:
+        pass
+
     print("\nWAA Health Check:")
     for check, result in checks.items():
         status = "OK" if result else "FAIL"
         print(f"  {check}: {status}")
+
+    errors = settings.validate()
+    if errors:
+        print("\nConfiguration errors:")
+        for e in errors:
+            print(f"  ✗ {e}")
+    else:
+        print("\nConfiguration: OK")
+
     db.close()
 
 

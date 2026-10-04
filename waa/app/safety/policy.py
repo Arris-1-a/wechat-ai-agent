@@ -4,6 +4,8 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from app.config import settings
+
 
 # Keywords that trigger risk levels
 LOW_RISK_PATTERNS = [
@@ -36,7 +38,7 @@ SECRET_PATTERNS = [
     r"token\s*[:=]\s*\S+",
     r"api[_-]?key\s*[:=]\s*\S+",
     r"验证码[是：:]\s*\d+",
-    r"\d{6,}",  # 6+ digit codes
+    r"\d{6,}",
 ]
 
 PROMPT_INJECTION_PATTERNS = [
@@ -51,41 +53,51 @@ class SafetyPolicy:
 
     def __init__(self, high_risk_mode: str = "block"):
         self.high_risk_mode = high_risk_mode
+        self._persona = settings.persona
 
     def assess_risk(self, message: str) -> tuple[str, str]:
         """Return (risk_level, reason)."""
         msg = message.strip()
 
-        # Check critical first
         for pattern in CRITICAL_PATTERNS:
             if re.search(pattern, msg, re.IGNORECASE):
                 return "critical", f"critical keyword matched: {pattern}"
 
-        # Check high risk
         for pattern in HIGH_RISK_PATTERNS:
             if re.search(pattern, msg, re.IGNORECASE):
                 return "high", f"high risk keyword: {pattern}"
 
-        # Check prompt injection
-        for pattern in PROMPT_INJECTION_PATTERNS:
-            if re.search(pattern, msg, re.IGNORECASE):
-                return "critical", "potential prompt injection"
+        if self.check_prompt_injection(msg):
+            return "critical", "potential prompt injection"
 
-        # Check medium
+        if self.matches_blacklist_topic(msg):
+            return "critical", "blacklist topic match"
+
         for pattern in MEDIUM_RISK_PATTERNS:
             if re.search(pattern, msg, re.IGNORECASE):
                 return "medium", f"medium risk keyword: {pattern}"
 
-        # Default to low
         return "low", "normal conversation"
 
+    def check_prompt_injection(self, text: str) -> bool:
+        for pattern in PROMPT_INJECTION_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                return True
+        return False
+
+    def matches_blacklist_topic(self, text: str) -> bool:
+        blacklist = self._persona.data.get("blacklist_topics", [])
+        for topic in blacklist:
+            if topic and topic in text:
+                return True
+        return False
+
     def filter_secrets(self, text: str) -> tuple[str, bool]:
-        """Remove or flag sensitive data in text. Returns (filtered_text, was_blocked)."""
+        """Remove or flag sensitive data in text."""
         blocked = False
         for pattern in SECRET_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
                 blocked = True
-                # Mask the secret
                 text = re.sub(pattern, "****", text, flags=re.IGNORECASE)
         return text, blocked
 
@@ -96,4 +108,4 @@ class SafetyPolicy:
             return True
         if risk_level == "high":
             return self.high_risk_mode != "block"
-        return False  # critical always blocked
+        return False

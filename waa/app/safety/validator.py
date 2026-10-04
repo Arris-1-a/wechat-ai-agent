@@ -24,17 +24,13 @@ class ReplyValidator:
         if len(response_text) > self.max_length:
             return False, f"reply too long ({len(response_text)} > {self.max_length})"
 
-        # Check for secrets
         filtered, blocked = self.safety.filter_secrets(response_text)
         if blocked:
             return False, "secret detected in reply"
 
-        # Check for prompt leakage
-        if "system prompt" in response_text.lower() or "你是" in response_text:
-            if any(kw in response_text.lower() for kw in ["ignore", "system", "prompt", "instruction"]):
-                return False, "potential prompt leakage"
+        if any(kw in response_text.lower() for kw in ["system prompt", "you are", "ignore"]):
+            return False, "potential prompt leakage"
 
-        # Check for dangerous commitments
         dangerous = re.search(
             r"(同意|答应|承诺|保证).*(转账|付款|借钱|合同|签字)",
             response_text,
@@ -46,7 +42,6 @@ class ReplyValidator:
 
     def parse_ai_response(self, raw_text: str) -> Optional[dict]:
         """Parse JSON response from LLM, fallback to plain text."""
-        # Try JSON first
         try:
             data = json.loads(raw_text)
             if "action" in data and "reply" in data:
@@ -54,7 +49,6 @@ class ReplyValidator:
         except json.JSONDecodeError:
             pass
 
-        # Fallback: extract JSON from code blocks
         json_match = re.search(r"\{[^{}]*\"action\"[^{}]*\}", raw_text, re.DOTALL)
         if json_match:
             try:
@@ -62,5 +56,4 @@ class ReplyValidator:
             except json.JSONDecodeError:
                 pass
 
-        # Last resort: treat entire text as reply
         return {"action": "reply", "reply": raw_text.strip(), "risk": "low", "reason": "fallback"}
