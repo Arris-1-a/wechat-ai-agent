@@ -116,7 +116,7 @@ class Dashboard:
                 today_blocked=today.get("blocked", 0),
                 today_failed=today.get("failed", 0),
                 total_contacts=len(self._db.list_contacts()),
-                total_messages=sum(today.values()) + (self._db.get_recent_events(limit=1000) and 0),
+                total_messages=sum(today.values()),
             )
 
         @app.get("/events", response_model=list[EventItem])
