@@ -7,9 +7,9 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
-if [ ! -f ".venv/bin/python3" ]; then
+if [ ! -f ".venv/bin/python" ]; then
     echo "Error: .venv not found. Run ./scripts/install.sh first."
     exit 1
 fi
 
-exec .venv/bin/python3 -m app.main "$@"
+exec .venv/bin/python -m app.main "$@"

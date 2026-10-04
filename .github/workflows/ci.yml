@@ -27,8 +27,10 @@ jobs:
           pip install -r requirements.txt
       - name: Run tests
         run: pytest tests/ -v --tb=short
+        working-directory: waa
       - name: Run tests with coverage
         run: pytest tests/ -v --cov=app --cov-report=xml
+        working-directory: waa
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         if: matrix.python-version == '3.12'

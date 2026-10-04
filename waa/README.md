@@ -36,13 +36,16 @@ cp .env.example .env
 ## 运行
 
 ```bash
+# 安装依赖
+./scripts/install.sh
+
 # 健康检查
 ./scripts/status.sh
 
 # 启动 Agent
 ./scripts/start.sh
 
-# 测试
+# 运行测试
 ./scripts/test.sh
 
 # 停止
