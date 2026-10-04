@@ -52,18 +52,31 @@ cp .env.example .env
 ## launchd 自动启动
 
 ```bash
-# 安装
-cp macos/launchd/com.arris.wechat-agent.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.arris.wechat-agent.plist
+# 安装（使用新路径）
+cp launchd/com.user.wechat-ai-agent.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.user.wechat-ai-agent.plist
 
 # 卸载
-launchctl unload ~/Library/LaunchAgents/com.arris.wechat-agent.plist
-rm ~/Library/LaunchAgents/com.arris.wechat-agent.plist
+launchctl unload ~/Library/LaunchAgents/com.user.wechat-ai-agent.plist
+rm ~/Library/LaunchAgents/com.user.wechat-ai-agent.plist
 ```
 
 ## Dashboard
 
-启动后访问: http://127.0.0.1:8765
+启动后访问: **http://127.0.0.1:8765**
+
+支持操作：
+- `GET /health` — 系统健康状态
+- `GET /stats` — 今日统计数据
+- `GET /events` — 最近事件
+- `GET /contacts` — 联系人列表
+- `GET /replies` — AI 回复记录
+- `GET /settings` — 当前配置
+- `POST /settings` — 更新配置
+- `GET /persona` — 人格配置
+- `PUT /persona` — 更新人格
+- `GET /system-state` — 系统状态
+- `POST /emergency-stop` — 紧急停止
 
 ## 架构
 
@@ -72,12 +85,30 @@ WeChat.app
     ↑
 WeChatAdapter (Accessibility API)
     ↑
-MessageListener → SQLite Queue
+MessageListener → SQLite Queue (WAL mode)
     ↑
-Worker (Dedup + Safety + AI + Send)
+MessageWorker (Dedup + Safety + AI + Send)
     ↑
-Watchdog (Health Monitor)
+Watchdog (Heartbeat Monitor)
 ```
+
+### 核心模块
+
+| 模块 | 说明 |
+|------|------|
+| `app/state.py` | AppState 单例 — 进程级共享状态 |
+| `app/config.py` | 配置 + Persona YAML 系统 |
+| `app/logging_config.py` | 日志（轮转 + 密钥脱敏） |
+| `app/safety/policy.py` | 安全策略引擎（4 级风险） |
+| `app/safety/validator.py` | 回复验证器 |
+| `app/deduplicator.py` | 消息去重（SHA-256 + TTL） |
+| `app/throttle.py` | 回复节流（防止快速连发） |
+| `app/agent.py` | AI 对话代理（OpenAI 兼容） |
+| `app/worker.py` | 消息处理工作器 |
+| `app/listener.py` | 消息监听器 |
+| `app/watchdog.py` | 系统监控 |
+| `app/dashboard.py` | FastAPI 仪表盘 |
+| `app/database.py` | SQLite 数据库层 |
 
 ## 安全
 
@@ -85,14 +116,15 @@ Watchdog (Health Monitor)
 - AI 回复经过 Safety Policy 和 Reply Validator 双重校验
 - 金钱/密码/验证码/合同类消息自动拦截
 - Prompt Injection 防护
-- API Key 不进 Git
+- API Key 不进 Git / 不落库 / 不记录日志（SecretRedactor）
 - Dashboard 只监听 127.0.0.1
+- 紧急停止（Emergency Stop）一键禁用自动回复
 
 ## 隐私
 
 - 聊天记录仅存本地，不上传
-- 日志脱敏处理
-- 最小化发送给 LLM 的上下文
+- 日志自动脱敏处理
+- 最小化发送给 LLM 的上下文（最近 20 条消息）
 
 ## 故障排查
 
@@ -102,6 +134,29 @@ Watchdog (Health Monitor)
 | `WeChat not running` | 确保微信 Mac 客户端已打开 |
 | `Database locked` | 检查是否有其他进程占用 |
 | `LLM timeout` | 检查网络或 LLM API 配置 |
+| `dashboard unreachable` | 检查 127.0.0.1:8765 是否被防火墙阻止 |
+
+## 开发
+
+```bash
+# 安装开发依赖
+python -m pip install -e ".[dev]"
+# 或
+pip install -r requirements.txt
+
+# 运行测试
+pytest waa/tests/ -v
+
+# 运行测试 + 覆盖率
+pytest waa/tests/ -v --cov=waa --cov-report=term-missing
+```
+
+## CI/CD
+
+GitHub Actions 自动运行：
+- Python 3.11 / 3.12 / 3.13 多版本测试
+- 覆盖率报告（目标 80%+）
+- 健康检查
 
 ## License
 
