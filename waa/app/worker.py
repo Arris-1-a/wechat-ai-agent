@@ -27,16 +27,17 @@ class MessageWorker:
         db: Database,
         throttle: ReplyThrottle,
         poll_interval: float = 5.0,
+        agent: Optional[AIChatAgent] = None,
     ):
         self._adapter = adapter
         self._db = db
         self._throttle = throttle
         self._poll_interval = poll_interval
+        self._agent = agent or AIChatAgent()
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._safety = SafetyPolicy(high_risk_mode=settings.high_risk_mode)
         self._validator = ReplyValidator(max_length=settings.max_reply_length)
-        self._agent = AIChatAgent()
 
     def start(self) -> None:
         self._running = True
@@ -66,6 +67,10 @@ class MessageWorker:
             self._process_one(msg)
 
     def _process_one(self, msg: dict) -> None:
+        from app.state import state
+        if not state.auto_reply_enabled:
+            return
+
         contact_id = msg.get("wx_id", msg.get("contact_id", "unknown"))
         content = msg.get("content", "")
         msg_id = msg.get("id")

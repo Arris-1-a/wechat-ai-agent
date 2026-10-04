@@ -51,9 +51,15 @@ PROMPT_INJECTION_PATTERNS = [
 class SafetyPolicy:
     """Evaluates message risk level and blocks dangerous content."""
 
-    def __init__(self, high_risk_mode: str = "block"):
+    def __init__(self, high_risk_mode: str = "block", persona_data: dict | None = None):
         self.high_risk_mode = high_risk_mode
-        self._persona = settings.persona
+        self._persona_data = persona_data
+
+    def _get_blacklist_topics(self) -> list[str]:
+        if self._persona_data is not None:
+            return self._persona_data.get("blacklist_topics", [])
+        from app.config import settings
+        return settings.persona.data.get("blacklist_topics", [])
 
     def assess_risk(self, message: str) -> tuple[str, str]:
         """Return (risk_level, reason)."""
@@ -86,7 +92,7 @@ class SafetyPolicy:
         return False
 
     def matches_blacklist_topic(self, text: str) -> bool:
-        blacklist = self._persona.data.get("blacklist_topics", [])
+        blacklist = self._get_blacklist_topics()
         for topic in blacklist:
             if topic and topic in text:
                 return True

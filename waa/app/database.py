@@ -326,14 +326,16 @@ class Database:
     def get_today_stats(self) -> dict:
         conn = self._get_conn()
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        stats = {}
-        for label, condition in [
-            ("received", f"direction='incoming' AND date(created_at) = '{today}'"),
-            ("replied", f"direction='incoming' AND status IN ('processed', 'sent') AND date(created_at) = '{today}'"),
-            ("blocked", f"direction='incoming' AND status = 'ignored' AND date(created_at) = '{today}'"),
-            ("failed", f"direction='incoming' AND status = 'failed' AND date(created_at) = '{today}'"),
-        ]:
-            row = conn.execute(f"SELECT COUNT(*) FROM messages WHERE {condition}").fetchone()
+        params: list[Any] = [today]
+        conditions = [
+            ("received", "direction='incoming' AND date(created_at) = ?"),
+            ("replied", "direction='incoming' AND status IN ('processed', 'sent') AND date(created_at) = ?"),
+            ("blocked", "direction='incoming' AND status = 'ignored' AND date(created_at) = ?"),
+            ("failed", "direction='incoming' AND status = 'failed' AND date(created_at) = ?"),
+        ]
+        stats: dict[str, int] = {}
+        for label, condition in conditions:
+            row = conn.execute(f"SELECT COUNT(*) FROM messages WHERE {condition}", params).fetchone()
             stats[label] = row[0]
         return stats
 

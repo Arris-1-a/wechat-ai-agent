@@ -6,9 +6,11 @@ import threading
 import time
 from typing import Optional
 
+from app.config import settings
 from app.database import Database
 from app.deduplicator import Deduplicator
 from app.logging_config import logger
+from app.state import state
 from app.wechat_adapter import WeChatAdapter
 
 logger = logging.getLogger("waa.listener")

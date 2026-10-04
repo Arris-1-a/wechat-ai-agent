@@ -21,6 +21,7 @@ from app.state import state
 from app.throttle import ReplyThrottle
 from app.watchdog import Watchdog
 from app.wechat import create_adapter
+from app.agent import AIChatAgent
 from app.worker import MessageWorker
 
 _components = {}
@@ -80,15 +81,17 @@ def main() -> None:
         return
 
     adapter = create_adapter()
+    agent = AIChatAgent()
     deduplicator = Deduplicator()
     throttle = ReplyThrottle(min_delay=settings.reply_min_delay, max_delay=settings.reply_max_delay)
     watchdog = Watchdog(db)
     listener = MessageListener(adapter, db, deduplicator)
-    worker = MessageWorker(adapter, db, throttle)
+    worker = MessageWorker(adapter, db, throttle, agent)
     dashboard = Dashboard(db)
 
     _components.update({
         "adapter": adapter,
+        "agent": agent,
         "deduplicator": deduplicator,
         "throttle": throttle,
         "watchdog": watchdog,
@@ -115,6 +118,9 @@ def main() -> None:
             watchdog.record_heartbeat("agent", "healthy")
     except KeyboardInterrupt:
         _shutdown(2, None)
+    except Exception as e:
+        logger.error("Main loop crashed: %s", e)
+        _shutdown(-1, None)
 
 
 def _run_health_check(db: Database) -> None:

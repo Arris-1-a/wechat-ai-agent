@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import threading
 import time
 from typing import Optional
 
@@ -11,6 +12,7 @@ class Deduplicator:
 
     def __init__(self, max_cache_size: int = 10000, ttl_seconds: int = 3600):
         self._seen: dict[str, float] = {}
+        self._lock = threading.Lock()
         self._max_size = max_cache_size
         self._ttl = ttl_seconds
 
@@ -21,11 +23,12 @@ class Deduplicator:
 
     def is_duplicate(self, key: str) -> bool:
         now = time.time()
-        self._cleanup(now)
-        if key in self._seen:
-            return True
-        self._seen[key] = now
-        self._evict_if_needed()
+        with self._lock:
+            self._cleanup(now)
+            if key in self._seen:
+                return True
+            self._seen[key] = now
+            self._evict_if_needed()
         return False
 
     def _cleanup(self, now: float) -> None:
@@ -45,4 +48,5 @@ class Deduplicator:
         return len(self._seen)
 
     def clear(self) -> None:
-        self._seen.clear()
+        with self._lock:
+            self._seen.clear()
