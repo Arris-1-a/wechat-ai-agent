@@ -100,6 +100,7 @@ class NotImplementedAdapter(WeChatAdapter):
         self._raise("verify_message_sent")
 
 
-# Factory — will be replaced with real adapter once permission is granted
+# Factory — returns real adapter; health check will validate accessibility
 def create_adapter() -> WeChatAdapter:
-    return NotImplementedAdapter()
+    from app.wechat.accessibility_adapter import AccessibilityAdapter
+    return AccessibilityAdapter()

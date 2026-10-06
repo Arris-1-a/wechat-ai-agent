@@ -292,8 +292,8 @@ def test_not_implemented_adapter():
 
 def test_create_adapter():
     adapter = create_adapter()
-    assert isinstance(adapter, NotImplementedAdapter)
-    assert adapter.is_running() is False
+    from app.wechat.accessibility_adapter import AccessibilityAdapter
+    assert isinstance(adapter, AccessibilityAdapter)
     print("  create_adapter: PASS")
 
 
