@@ -26,7 +26,8 @@ class AccessibilityAdapter(WeChatAdapter):
     def _get_wechat_pid(self) -> Optional[int]:
         ws = NSWorkspace.sharedWorkspace()
         for app in ws.runningApplications():
-            if app.localizedName() == "WeChat":
+            name = app.localizedName()
+            if name and ("WeChat" in name or "微信" in name):
                 return app.processIdentifier()
         return None
 

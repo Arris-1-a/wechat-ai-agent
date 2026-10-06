@@ -559,10 +559,12 @@ def test_watchdog_callbacks():
 # ── Agent ─────────────────────────────────────────────────────────────────────
 
 def test_agent_no_api_key():
+    from unittest.mock import patch
     from app.agent import AIChatAgent
-    agent = AIChatAgent(api_key="")
-    result = agent.generate_reply("context", "message")
-    assert result is None
+    with patch.dict('app.agent.settings.__dict__', {'llm_api_key': ''}):
+        agent = AIChatAgent(api_key="")
+        result = agent.generate_reply("context", "message")
+        assert result is None
     print("  agent_no_api_key: PASS")
 
 
